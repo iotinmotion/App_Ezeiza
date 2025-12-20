@@ -39,9 +39,9 @@
     <div class="container">
       <h2>🛒 Control de Carritos</h2>
 
-      <div class="cards-grid" id="summaryGrid">
+      <div class="cards-grid" id="summaryGrid" data-app-id="<%= user.app %>">
         <% zones.forEach(zone => { %>
-        <div class="card status-<%= zone.status %>">
+        <div class="card status-<%= zone.status %>" data-zone-name="<%= zone.name %>">
           <div class="card-header">
             <h3><%= zone.name %></h3>
           </div>
@@ -78,7 +78,7 @@
         <!-- Tarjeta Izquierda: Cuadrícula de Sensores -->
         <div class="split-card">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <h3 style="margin: 0;">Nivel de Llenado por Sensor</h3>
+            <h2 style="margin: 0;">Nivel de Llenado por Sensor</h2>
             <span id="connectionStatus" class="offline-badge">Sin conexión</span>
           </div>
           <div class="inner-card-bg">
@@ -86,7 +86,7 @@
               <% if (typeof cartDetails !== 'undefined' && cartDetails) { %>
                 <% cartDetails.forEach(cart => { %>
                   <!-- Tooltip personalizado usando data-tooltip -->
-                  <div class="sensor-square" data-tooltip="Carritos: <%= cart.cart_counter %>" style="background-color: <%= cart.color || '#999' %>;">
+                  <div class="sensor-square" data-tooltip="Carritos: <%= cart.cart_counter %>" style="background-color: <%= cart.color || '#999' %>;" data-sensor-zone="<%= cart.zone || 'Zona' %>">
                     <div style="font-size: 0.7em; margin-bottom: 2px;"><%= cart.zone || 'Zona' %></div>
                     <div><%= cart.percentage %>%</div>
                   </div>
@@ -98,14 +98,30 @@
 
         <!-- Tarjeta Derecha: Espacio reservado -->
         <div class="split-card">
-          <h3>Información Adicional</h3>
-          <p>Contenido pendiente...</p>
+          <h2>Información Adicional</h2>
+          <div class="inner-card-bg">
+            <div class="cards-grid" id="rawDataGrid">
+              <% if (typeof rawData !== 'undefined' && rawData) { %>
+                <% 
+                  const colorPriority = { '#dc3545': 1, '#fd7e14': 2, '#28a745': 3 };
+                  const getPriority = (c) => colorPriority[c] || 4;
+                  rawData.sort((a, b) => getPriority(a.color) - getPriority(b.color));
+                %>
+                <% rawData.forEach(doc => { %>
+                  <div class="card" style="border-left: 5px solid <%= doc.color || 'transparent' %>;">
+                    <div class="card-body">
+                      <% Object.keys(doc).forEach(key => { %>
+                        <div style="font-size: 0.75em; overflow-wrap: break-word;"><strong><%= key %>:</strong> <%= doc[key] %></div>
+                      <% }) %>
+                    </div>
+                  </div>
+                <% }) %>
+              <% } %>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div class="map-placeholder">
-        <p>Vista de Mapa Interactiva (Placeholder)</p>
-      </div>
     </div>
   </main>
 
@@ -115,52 +131,8 @@
     </div>
   </footer>
 
-  <script src="/js/script.js"></script>
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    const statusBadge = document.getElementById('connectionStatus');
-    const userApp = <%= user.app %>; // Obtenemos el ID de la app del usuario como número
-
-    // Al conectar, solicitamos los datos
-    socket.on('connect', () => {
-        statusBadge.style.display = 'none';
-        socket.emit('request_dashboard_data', userApp);
-    });
-
-    socket.on('disconnect', () => {
-        statusBadge.style.display = 'inline-block';
-    });
-
-    // Recibir actualizaciones del servidor
-    socket.on('dashboard_update', (data) => {
-        // 1. Actualizar Tarjetas de Resumen (Zones)
-        const summaryGrid = document.getElementById('summaryGrid');
-        summaryGrid.innerHTML = '';
-        data.zones.forEach(zone => {
-            summaryGrid.innerHTML += `
-            <div class="card status-${zone.status}">
-                <div class="card-header"><h3>${zone.name}</h3></div>
-                <div class="card-body">
-                <div class="metric"><span class="number">${zone.carts}</span><span class="label">${zone.footer_card}</span></div>
-                </div>
-            </div>`;
-        });
-
-        // 2. Actualizar Cuadrícula de Sensores
-        const grid = document.getElementById('sensorGrid');
-        grid.innerHTML = ''; // Limpiar contenido actual
-        data.cartDetails.forEach(cart => {
-            const div = document.createElement('div');
-            div.className = 'sensor-square fade-in'; // Agregar clase de animación
-            div.style.backgroundColor = cart.color;
-            div.setAttribute('data-tooltip', `Carritos: ${cart.cart_counter}`); // Tooltip CSS
-            div.innerHTML = `<div style="font-size: 0.7em; margin-bottom: 2px;">${cart.zone || 'Zona'}</div>
-                             <div>${cart.percentage}%</div>`;
-            grid.appendChild(div);
-        });
-    });
-  </script>
+  <script src="/js/script.js"></script>
 </body>
 
 </html>

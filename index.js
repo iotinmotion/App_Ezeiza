@@ -87,7 +87,7 @@ io.on('connection', (socket) => {
                     const cartDetails = processCartData(rawData);
 
                     const zones = calculateZonesMetrics(cartDetails);
-                    socket.emit('dashboard_update', { zones, cartDetails });
+                    socket.emit('dashboard_update', { zones, cartDetails, rawData });
                 }
             } catch (error) {
                 console.error("Socket Error:", error);
@@ -109,6 +109,16 @@ io.on('connection', (socket) => {
             changeStream = cardsCollection.watch();
             changeStream.on('change', async () => {
                 await sendData();
+            });
+
+            // Manejar errores de Change Stream (ej. MongoDB Standalone)
+            changeStream.on('error', (err) => {
+                console.error("ChangeStream error (fallback a polling):", err.message);
+                if (changeStream) changeStream.close().catch(() => {});
+                
+                if (!interval) {
+                    interval = setInterval(sendData, 10000);
+                }
             });
         } catch (error) {
             // Fallback a Polling si no hay soporte para Change Streams
