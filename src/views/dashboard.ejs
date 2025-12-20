@@ -6,121 +6,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Disponibilidad</title>
   <link rel="stylesheet" href="/css/style.css">
-  <style>
-    /* Estilos para responsividad y alineación */
-    .container {
-      max-width: 1200px;
-      /* Ancho máximo igual para menú y tarjetas */
-      margin: 0 auto;
-      /* Centrado automático */
-      padding: 0 20px;
-      width: 100%;
-      box-sizing: border-box;
-    }
-
-    .main-header {
-      width: 100%;
-      /* El fondo del header sigue ocupando todo el ancho */
-    }
-
-    .header-content {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px 0;
-    }
-
-    /* Grilla responsiva para las tarjetas */
-    .cards-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-    }
-
-    /* Animación suave para las tarjetas */
-    .card {
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-    }
-    .card:hover {
-      transform: translateY(-5px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.15);
-    }
-
-    /* Estilos para la leyenda */
-    .legend-content {
-      display: flex;
-      justify-content: center;
-      gap: 30px;
-      flex-wrap: wrap;
-    }
-    .legend-item {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      font-weight: 500;
-    }
-    .status-dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-    }
-
-    /* Sección dividida (2 tarjetas) */
-    .split-section {
-      display: flex;
-      gap: 20px;
-      margin-top: 20px;
-    }
-    .split-card {
-      flex: 1;
-      background: #fff;
-      border-radius: 8px;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      padding: 20px;
-    }
-    .inner-card-bg {
-      background-color: #f4f6f9; /* Color de fondo simulado de la pantalla principal */
-      border-radius: 10px;
-      padding: 15px;
-      margin: 10px 0; /* Espacio para no tocar los extremos laterales */
-    }
-    .sensor-grid {
-      display: grid;
-      grid-template-columns: repeat(6, 1fr);
-      gap: 10px;
-    }
-    .sensor-square {
-      aspect-ratio: 1;
-      border-radius: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-weight: bold;
-      font-size: 0.85rem;
-    }
-
-    /* Ajustes para móviles */
-    @media (max-width: 768px) {
-      .header-content {
-        flex-direction: column;
-        gap: 15px;
-      }
-
-      .main-nav {
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        justify-content: center;
-      }
-      .split-section {
-        flex-direction: column;
-      }
-      .sensor-grid {
-        grid-template-columns: repeat(4, 1fr); /* Menos columnas en móvil */
-      }
-    }
-  </style>
 </head>
 
 <body>
@@ -129,7 +14,8 @@
   <header class="main-header">
     <div class="container header-content">
       <div class="logo-area">
-        <div class="logo-circle">AE</div>
+        <!-- Optimización: width/height definidos para evitar saltos de carga -->
+        <img src="/img/logo.jpg" alt="App Ezeiza" class="logo-circle" width="40" height="40">
         <span class="logo-text">Aeropuerto Ezeiza</span>
       </div>
 
@@ -142,7 +28,7 @@
       <div class="user-area">
         <button id="themeToggle" class="btn-icon">🌓</button>
         <span class="username"><%= user.username %> (<%= user.role %>)</span>
-        <img src="https://ui-avatars.com/api/?background=4bc2c5&color=fff" alt="User" class="user-photo">
+        <img src="/img/logo.jpg" alt="User" class="user-photo">
         <a href="/logout" class="btn-logout">Salir</a>
       </div>
     </div>
@@ -153,7 +39,7 @@
     <div class="container">
       <h2>🛒 Control de Carritos</h2>
 
-      <div class="cards-grid">
+      <div class="cards-grid" id="summaryGrid">
         <% zones.forEach(zone => { %>
         <div class="card status-<%= zone.status %>">
           <div class="card-header">
@@ -191,19 +77,18 @@
       <div class="split-section">
         <!-- Tarjeta Izquierda: Cuadrícula de Sensores -->
         <div class="split-card">
-          <h3>Nivel de Llenado por Sensor</h3>
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3 style="margin: 0;">Nivel de Llenado por Sensor</h3>
+            <span id="connectionStatus" class="offline-badge">Sin conexión</span>
+          </div>
           <div class="inner-card-bg">
-            <div class="sensor-grid">
-              <% if (typeof cartDetails !== 'undefined') { %>
+            <div class="sensor-grid" id="sensorGrid">
+              <% if (typeof cartDetails !== 'undefined' && cartDetails) { %>
                 <% cartDetails.forEach(cart => { %>
-                  <% 
-                    let pct = Math.round(cart.senseValue_m * 100 / 4);
-                    let color = '#28a745'; // Normal (Verde)
-                    if (pct <= 20) color = '#dc3545'; // Crítico (Rojo)
-                    else if (pct < 80) color = '#fd7e14'; // Medio (Naranja)
-                  %>
-                  <div class="sensor-square" style="background-color: <%= color %>;">
-                    <%= pct %>%
+                  <!-- Tooltip personalizado usando data-tooltip -->
+                  <div class="sensor-square" data-tooltip="Carritos: <%= cart.cart_counter %>" style="background-color: <%= cart.color || '#999' %>;">
+                    <div style="font-size: 0.7em; margin-bottom: 2px;"><%= cart.zone || 'Zona' %></div>
+                    <div><%= cart.percentage %>%</div>
                   </div>
                 <% }) %>
               <% } %>
@@ -231,6 +116,51 @@
   </footer>
 
   <script src="/js/script.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    const statusBadge = document.getElementById('connectionStatus');
+    const userApp = <%= user.app %>; // Obtenemos el ID de la app del usuario como número
+
+    // Al conectar, solicitamos los datos
+    socket.on('connect', () => {
+        statusBadge.style.display = 'none';
+        socket.emit('request_dashboard_data', userApp);
+    });
+
+    socket.on('disconnect', () => {
+        statusBadge.style.display = 'inline-block';
+    });
+
+    // Recibir actualizaciones del servidor
+    socket.on('dashboard_update', (data) => {
+        // 1. Actualizar Tarjetas de Resumen (Zones)
+        const summaryGrid = document.getElementById('summaryGrid');
+        summaryGrid.innerHTML = '';
+        data.zones.forEach(zone => {
+            summaryGrid.innerHTML += `
+            <div class="card status-${zone.status}">
+                <div class="card-header"><h3>${zone.name}</h3></div>
+                <div class="card-body">
+                <div class="metric"><span class="number">${zone.carts}</span><span class="label">${zone.footer_card}</span></div>
+                </div>
+            </div>`;
+        });
+
+        // 2. Actualizar Cuadrícula de Sensores
+        const grid = document.getElementById('sensorGrid');
+        grid.innerHTML = ''; // Limpiar contenido actual
+        data.cartDetails.forEach(cart => {
+            const div = document.createElement('div');
+            div.className = 'sensor-square fade-in'; // Agregar clase de animación
+            div.style.backgroundColor = cart.color;
+            div.setAttribute('data-tooltip', `Carritos: ${cart.cart_counter}`); // Tooltip CSS
+            div.innerHTML = `<div style="font-size: 0.7em; margin-bottom: 2px;">${cart.zone || 'Zona'}</div>
+                             <div>${cart.percentage}%</div>`;
+            grid.appendChild(div);
+        });
+    });
+  </script>
 </body>
 
 </html>

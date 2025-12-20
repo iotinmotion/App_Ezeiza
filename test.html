@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lista de Zonas</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8f9fa;
+            --card-bg: #ffffff;
+            --text-main: #333;
+            --text-muted: #888;
+            --primary-purple: #5a32ea;
+            --color-medio: #d4a017;
+            --color-bajo: #e67e22;
+            --color-completo: #27ae60;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            padding: 40px;
+            color: var(--text-main);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+        }
+
+        /* Encabezado y Filtros */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .results-count {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            background: #eee;
+            padding: 4px 10px;
+            border-radius: 20px;
+        }
+
+        .filters {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .filter-btn {
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: none;
+            background: #e9ecef;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+
+        .filter-btn.active {
+            background: var(--primary-purple);
+            color: white;
+        }
+
+        .sort-section {
+            display: flex;
+            gap: 20px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* Tarjetas */
+        .card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+            position: relative;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .zone-info h3 {
+            margin: 0;
+            font-size: 1.2rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .icon-pin { color: #f1c40f; }
+
+        .cart-info {
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-top: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .percentage-info {
+            text-align: right;
+        }
+
+        .percentage-val {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: block;
+        }
+
+        .status-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        /* Barra de Progreso */
+        .progress-container {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin-top: 20px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            border-radius: 10px;
+        }
+
+        /* Colores dinámicos */
+        .medio { color: var(--color-medio); }
+        .bajo { color: var(--color-bajo); }
+        .completo { color: var(--color-completo); }
+
+        .bg-medio { background: var(--color-medio); }
+        .bg-bajo { background: var(--color-bajo); }
+        .bg-completo { background: var(--color-completo); }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h2>Lista de Zonas</h2>
+        <span class="results-count">30 resultados</span>
+    </div>
+
+    <div class="filters">
+        <button class="filter-btn active">Todos</button>
+        <button class="filter-btn">Críticos</button>
+        <button class="filter-btn">Bajos</button>
+        <button class="filter-btn">Medios</button>
+        <button class="filter-btn">Completos</button>
+    </div>
+
+    <div class="sort-section">
+        <span>Ordenar: <strong>Nombre ↑</strong></span>
+        <span>% Ocupación</span>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="zone-info">
+                <h3><span class="icon-pin">📍</span> Zona A1</h3>
+                <div class="cart-info">🛒 10 de 20 carritos</div>
+            </div>
+            <div class="percentage-info">
+                <span class="percentage-val medio">50%</span>
+                <span class="status-label medio">Medio</span>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar bg-medio" style="width: 50%;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="zone-info">
+                <h3><span class="icon-pin" style="color:var(--color-bajo)">📍</span> Zona A2</h3>
+                <div class="cart-info">🛒 5 de 20 carritos</div>
+            </div>
+            <div class="percentage-info">
+                <span class="percentage-val bajo">25%</span>
+                <span class="status-label bajo">Bajo</span>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar bg-bajo" style="width: 25%;"></div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <div class="zone-info">
+                <h3><span class="icon-pin" style="color:var(--color-completo)">📍</span> Zona A5</h3>
+                <div class="cart-info">🛒 19 de 20 carritos</div>
+            </div>
+            <div class="percentage-info">
+                <span class="percentage-val completo">95%</span>
+                <span class="status-label completo">Completo</span>
+            </div>
+        </div>
+        <div class="progress-container">
+            <div class="progress-bar bg-completo" style="width: 95%;"></div>
+        </div>
+    </div>
+
+</div>
+
+</body>
+</html>
