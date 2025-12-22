@@ -1,5 +1,7 @@
 const express = require('express');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const { Server } = require('socket.io');
 const path = require('path');
 const session = require('express-session');
@@ -10,7 +12,19 @@ const { processCartData, calculateZonesMetrics } = require('./src/utils/dashboar
 require('dotenv').config();
 
 const app = express();
-const server = http.createServer(app);
+
+let server;
+// Verificar si existen rutas de certificados SSL en las variables de entorno
+if (process.env.SSL_KEY_PATH && process.env.SSL_CERT_PATH) {
+    const httpsOptions = {
+        key: fs.readFileSync(process.env.SSL_KEY_PATH),
+        cert: fs.readFileSync(process.env.SSL_CERT_PATH)
+    };
+    server = https.createServer(httpsOptions, app);
+} else {
+    server = http.createServer(app);
+}
+
 const io = new Server(server);
 const PORT = process.env.PORT || 3000;
 
