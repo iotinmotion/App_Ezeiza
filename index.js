@@ -23,7 +23,17 @@ app.set('views', path.join(__dirname, 'src/views'));
 app.set('trust proxy', 1);
 
 // Seguridad (Helmet)
-app.use(helmet());
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
+            imgSrc: ["'self'", "data:", "https://tile.openstreetmap.org", "https://unpkg.com", "https://*.openstreetmap.org"],
+            connectSrc: ["'self'", "ws:", "wss:"]
+        }
+    }
+}));
 
 // Archivos estáticos (CSS, JS, Imágenes)
 app.use(express.static(path.join(__dirname, 'src', 'views', 'publics')));

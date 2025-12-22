@@ -6,6 +6,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dashboard - Disponibilidad</title>
   <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .filter-buttons {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-filter {
+      padding: 5px 12px;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .btn-filter:hover {
+      background: #e2e6ea;
+    }
+    .btn-filter.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+  </style>
 </head>
 
 <body>
@@ -20,14 +44,16 @@
       </div>
 
       <nav class="main-nav">
-        <a href="#" class="active">Dashboard</a>
-        <a href="#">Mapas</a>
+        <a href="/dashboard" class="active">Dashboard</a>
+        <a href="/dashboard/maps">Mapas</a>
         <a href="#">Reportes</a>
       </nav>
 
       <div class="user-area">
         <button id="themeToggle" class="btn-icon">🌓</button>
-        <span class="username"><%= user.username %> (<%= user.role %>)</span>
+        <span class="username">
+          <%= user.username %> (<%= user.role %>)
+        </span>
         <img src="/img/logo.jpg" alt="User" class="user-photo">
         <a href="/logout" class="btn-logout">Salir</a>
       </div>
@@ -40,19 +66,25 @@
       <h2>🛒 Control de Carritos</h2>
 
       <div class="cards-grid" id="summaryGrid" data-app-id="<%= user.app %>">
-        <% zones.forEach(zone => { %>
-        <div class="card status-<%= zone.status %>" data-zone-name="<%= zone.name %>">
-          <div class="card-header">
-            <h3><%= zone.name %></h3>
-          </div>
-          <div class="card-body">
-            <div class="metric">
-              <span class="number"><%= zone.carts %></span>
-              <span class="label"><%= zone.footer_card %></span>
+        <% zones.forEach(zone=> { %>
+          <div class="card status-<%= zone.status %>" data-zone-name="<%= zone.name %>">
+            <div class="card-header">
+              <h3>
+                <%= zone.name %>
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="metric">
+                <span class="number">
+                  <%= zone.carts %>
+                </span>
+                <span class="label">
+                  <%= zone.footer_card %>
+                </span>
+              </div>
             </div>
           </div>
-        </div>
-        <% }) %>
+          <% }) %>
       </div>
 
       <!-- Tarjeta de Referencias -->
@@ -83,15 +115,21 @@
           </div>
           <div class="inner-card-bg">
             <div class="sensor-grid" id="sensorGrid">
-              <% if (typeof cartDetails !== 'undefined' && cartDetails) { %>
-                <% cartDetails.forEach(cart => { %>
+              <% if (typeof cartDetails !=='undefined' && cartDetails) { %>
+                <% cartDetails.forEach(cart=> { %>
                   <!-- Tooltip personalizado usando data-tooltip -->
-                  <div class="sensor-square" data-tooltip="Carritos: <%= cart.cart_counter %>" style="background-color: <%= cart.color || '#999' %>;" data-sensor-zone="<%= cart.zone || 'Zona' %>">
-                    <div style="font-size: 0.7em; margin-bottom: 2px;"><%= cart.zone || 'Zona' %></div>
-                    <div><%= cart.percentage %>%</div>
+                  <div class="sensor-square" data-tooltip="Carritos: <%= cart.cart_counter %>"
+                    style="background-color: <%= cart.color || '#999' %>;"
+                    data-sensor-zone="<%= cart.zone || 'Zona' %>">
+                    <div style="font-size: 0.7em; margin-bottom: 2px;">
+                      <%= cart.zone || 'Zona' %>
+                    </div>
+                    <div>
+                      <%= cart.percentage %>%
+                    </div>
                   </div>
-                <% }) %>
-              <% } %>
+                  <% }) %>
+                    <% } %>
             </div>
           </div>
         </div>
@@ -99,24 +137,56 @@
         <!-- Tarjeta Derecha: Espacio reservado -->
         <div class="split-card">
           <h2>Información Adicional</h2>
+          <div class="filter-buttons">
+            <button class="btn-filter active" data-filter="all">Todos</button>
+            <button class="btn-filter" data-filter="completo">Completos</button>
+            <button class="btn-filter" data-filter="medio">Medio</button>
+            <button class="btn-filter" data-filter="critico">Crítico</button>
+          </div>
           <div class="inner-card-bg">
             <div class="cards-grid" id="rawDataGrid">
-              <% if (typeof rawData !== 'undefined' && rawData) { %>
-                <% 
-                  const colorPriority = { '#dc3545': 1, '#fd7e14': 2, '#28a745': 3 };
-                  const getPriority = (c) => colorPriority[c] || 4;
+              <% if (typeof rawData !=='undefined' && rawData) { %>
+                <% const colorPriority={ '#dc3545' : 1, '#fd7e14' : 2, '#28a745' : 3 }; const getPriority=(c)=>
+                  colorPriority[c] || 4;
                   rawData.sort((a, b) => getPriority(a.color) - getPriority(b.color));
-                %>
-                <% rawData.forEach(doc => { %>
-                  <div class="card" style="border-left: 5px solid <%= doc.color || 'transparent' %>;">
-                    <div class="card-body">
-                      <% Object.keys(doc).forEach(key => { %>
-                        <div style="font-size: 0.75em; overflow-wrap: break-word;"><strong><%= key %>:</strong> <%= doc[key] %></div>
+                  %>
+                  <% rawData.forEach(doc=> { %>
+                    <% const maxVal=doc.cart_counter_max || 1; const pct=doc.percentage !==undefined ? doc.percentage :
+                      Math.round((doc.cart_counter / maxVal) * 100); %>
+                      <% const missing = Math.max(0, maxVal - doc.cart_counter); %>
+                      <div class="card" style="padding: 15px; border-left: 5px solid <%= doc.color %>;">
+                        <!-- Fila Superior: Título, Botón Color y Porcentaje Circular -->
+                        <div
+                          style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <h4 style="margin: 0; font-size: 1.1em;">
+                              <%= doc.zone || 'Zona' %>
+                            </h4>
+                            <span
+                              style="background-color: <%= doc.color %>; width: 15px; height: 15px; border-radius: 50%; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                          </div>
+                          <!-- Gráfico Circular SVG -->
+                          <svg viewBox="0 0 36 36" style="width: 50px; height: 50px; cursor: help;" title="Faltan <%= missing %> carritos para llenar">
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="#eee" stroke-width="3" />
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="<%= doc.color %>" stroke-width="3" stroke-dasharray="<%= pct %>, 100"
+                              style="transition: stroke-dasharray 0.5s ease;" />
+                            <text x="18" y="20.35" text-anchor="middle" fill="#333" font-size="10px" font-weight="bold">
+                              <%= pct %>%
+                            </text>
+                          </svg>
+                        </div>
+                        <!-- Fila Inferior: Icono Carrito y Contadores -->
+                        <div style="display: flex; align-items: center; gap: 8px; color: #666;">
+                          <span style="font-size: 1.2em;">🛒</span>
+                          <span style="font-weight: 600; font-size: 0.95em;">
+                            <%= doc.cart_counter %> / <%= doc.cart_counter_max %>
+                          </span>
+                        </div>
+                      </div>
                       <% }) %>
-                    </div>
-                  </div>
-                <% }) %>
-              <% } %>
+                        <% } %>
             </div>
           </div>
         </div>

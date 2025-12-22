@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mapas - Aeropuerto Ezeiza</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    #map {
+      height: 600px;
+      width: 100%;
+      border-radius: 8px;
+      z-index: 1;
+    }
+    /* Estilos para filtros (igual que dashboard) */
+    .filter-buttons {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-filter {
+      padding: 5px 12px;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .btn-filter:hover {
+      background: #e2e6ea;
+    }
+    .btn-filter.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- Header / Navegación -->
+  <header class="main-header">
+    <div class="container header-content">
+      <div class="logo-area">
+        <img src="/img/logo.jpg" alt="App Ezeiza" class="logo-circle" width="40" height="40">
+        <span class="logo-text">Aeropuerto Ezeiza</span>
+      </div>
+
+      <nav class="main-nav">
+        <a href="/dashboard">Dashboard</a>
+        <a href="/dashboard/maps" class="active">Mapas</a>
+        <a href="#">Reportes</a>
+      </nav>
+
+      <div class="user-area">
+        <button id="themeToggle" class="btn-icon">🌓</button>
+        <span class="username">
+          <%= user.username %> (<%= user.role %>)
+        </span>
+        <img src="/img/logo.jpg" alt="User" class="user-photo">
+        <a href="/logout" class="btn-logout">Salir</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <main class="dashboard-content">
+    <div class="container">
+      <h2>🗺️ Ubicación de Zonas</h2>
+
+      <!-- Cards Grid (Reutilizado del Dashboard) -->
+      <div class="cards-grid" id="summaryGrid" data-app-id="<%= user.app %>">
+        <% zones.forEach(zone=> { %>
+          <div class="card status-<%= zone.status %>" data-zone-name="<%= zone.name %>">
+            <div class="card-header">
+              <h3><%= zone.name %></h3>
+            </div>
+            <div class="card-body">
+              <div class="metric">
+                <span class="number"><%= zone.carts %></span>
+                <span class="label"><%= zone.footer_card %></span>
+              </div>
+            </div>
+          </div>
+        <% }) %>
+      </div>
+
+      <!-- Filtros de Mapa -->
+      <div class="filter-buttons" style="margin-top: 20px;">
+        <button class="btn-filter active" data-filter="all">Todos</button>
+        <button class="btn-filter" data-filter="completo">Completos</button>
+        <button class="btn-filter" data-filter="medio">Medio</button>
+        <button class="btn-filter" data-filter="critico">Crítico</button>
+      </div>
+      <!-- Mapa Leaflet -->
+      <div class="card" style="margin-top: 20px; padding: 0; overflow: hidden;">
+        <div id="map"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="main-footer">
+    <div class="container">
+      <p>&copy; 2023 App Ezeiza. Soporte: soporte@iotim.com.ar</p>
+    </div>
+  </footer>
+
+  <!-- Leaflet JS (Cargar antes que script.js) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/script.js"></script>
+</body>
+</html>
