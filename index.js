@@ -30,7 +30,8 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https://tile.openstreetmap.org", "https://unpkg.com", "https://*.openstreetmap.org"],
-            connectSrc: ["'self'", "ws:", "wss:"]
+            connectSrc: ["'self'", "ws:", "wss:"],
+            upgradeInsecureRequests: null
         }
     }
 }));
