@@ -29,6 +29,12 @@
       color: white;
       border-color: #007bff;
     }
+    /* Grid responsive para sensores: se adapta al ancho disponible */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+    }
   </style>
 </head>
 
@@ -110,7 +116,7 @@
         <!-- Tarjeta Izquierda: Cuadrícula de Sensores -->
         <div class="split-card">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <h2 style="margin: 0;">Nivel de Llenado por Sensor</h2>
+            <h2 style="margin: 0;">Nivel de Llenado por Zona</h2>
             <span id="connectionStatus" class="offline-badge">Sin conexión</span>
           </div>
           <div class="inner-card-bg">
