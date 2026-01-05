@@ -43,30 +43,7 @@
 
 <body>
 
-  <!-- Header / Navegación -->
-  <header class="main-header">
-    <div class="container header-content">
-      <div class="logo-area">
-        <img src="/img/logo.jpg" alt="App Ezeiza" class="logo-circle" width="40" height="40">
-        <span class="logo-text">Aeropuerto Ezeiza</span>
-      </div>
-
-      <nav class="main-nav">
-        <a href="/dashboard">Dashboard</a>
-        <a href="/dashboard/maps" class="active">Mapas</a>
-        <a href="#">Reportes</a>
-      </nav>
-
-      <div class="user-area">
-        <button id="themeToggle" class="btn-icon">🌓</button>
-        <span class="username">
-          <%= user.username %> (<%= user.role %>)
-        </span>
-        <img src="/img/logo.jpg" alt="User" class="user-photo">
-        <a href="/logout" class="btn-logout">Salir</a>
-      </div>
-    </div>
-  </header>
+  <%- include('partials/header', { page: 'maps', user: user }) %>
 
   <!-- Contenido Principal -->
   <main class="dashboard-content">
@@ -105,11 +82,7 @@
     </div>
   </main>
 
-  <footer class="main-footer">
-    <div class="container">
-      <p>&copy; 2023 App Ezeiza. Soporte: soporte@iotim.com.ar</p>
-    </div>
-  </footer>
+  <%- include('partials/footer') %>
 
   <!-- Leaflet JS (Cargar antes que script.js) -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>

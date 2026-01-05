@@ -44,7 +44,7 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://unpkg.com"],
             imgSrc: ["'self'", "data:", "https://tile.openstreetmap.org", "https://unpkg.com", "https://*.openstreetmap.org"],
-            connectSrc: ["'self'", "ws:", "wss:"],
+            connectSrc: ["'self'", "ws:", "wss:", "https://unpkg.com"],
             upgradeInsecureRequests: null
         }
     }
@@ -90,72 +90,109 @@ app.use((err, req, res, next) => {
     res.status(500).send('¡Algo salió mal en el servidor!');
 });
 
+// Lógica de Watcher Global para MongoDB
+let globalChangeStream;
+let globalPollingInterval;
+
+const updateAllClients = async () => {
+    const db = getDb();
+    if (!db) return;
+    
+    const cardsCollection = db.collection('cards_status');
+    // Obtener salas activas que correspondan a apps (formato 'app_ID')
+    const rooms = io.sockets.adapter.rooms;
+    const activeAppIds = new Set();
+
+    if (rooms) {
+        for (const [room, _] of rooms) {
+            if (room.startsWith('app_')) {
+                const id = parseInt(room.split('_')[1]);
+                if (!isNaN(id)) activeAppIds.add(id);
+            }
+        }
+    }
+
+    for (const appId of activeAppIds) {
+        try {
+            const rawData = await cardsCollection.find({ app: appId }).toArray();
+            const cartDetails = processCartData(rawData);
+            const zones = calculateZonesMetrics(cartDetails);
+            io.to(`app_${appId}`).emit('dashboard_update', { zones, cartDetails, rawData });
+        } catch (error) {
+            console.error(`Error actualizando app ${appId}:`, error);
+        }
+    }
+};
+
+const startPollingFallback = () => {
+    if (globalPollingInterval) return;
+    console.log("Iniciando Polling Global (10s)");
+    globalPollingInterval = setInterval(updateAllClients, 10000);
+};
+
+const startGlobalWatcher = () => {
+    const db = getDb();
+    if (!db) return;
+    
+    try {
+        const cardsCollection = db.collection('cards_status');
+        
+        if (globalChangeStream) globalChangeStream.close().catch(() => {});
+        
+        globalChangeStream = cardsCollection.watch();
+        console.log("Global Change Stream iniciado");
+
+        globalChangeStream.on('change', () => {
+            updateAllClients();
+        });
+
+        globalChangeStream.on('error', (err) => {
+            console.error("ChangeStream error (fallback a polling):", err.message);
+            if (globalChangeStream) globalChangeStream.close().catch(() => {});
+            startPollingFallback();
+        });
+        
+        if (globalPollingInterval) {
+            clearInterval(globalPollingInterval);
+            globalPollingInterval = null;
+        }
+
+    } catch (error) {
+        console.error("No se pudo iniciar ChangeStream:", error.message);
+        startPollingFallback();
+    }
+};
+
 // 5. Configuración de WebSockets
 io.on('connection', (socket) => {
     console.log('Cliente conectado via WebSocket');
-    let interval;
-    let changeStream;
 
     // Escuchar solicitud de inicio de datos
     socket.on('request_dashboard_data', async (userApp) => {
         // Asegurar que el ID sea un número para coincidir con el tipo de dato en MongoDB
         const appId = parseInt(userApp);
+        if (!appId) return;
 
-        const sendData = async () => {
-            try {
-                const db = getDb();
-                if (!db) return;
-                
-                const cardsCollection = db.collection('cards_status');
-                if (appId) {
-                    const rawData = await cardsCollection.find({ app: appId }).toArray();
-                    const cartDetails = processCartData(rawData);
+        // Unirse a la sala específica de la app para recibir actualizaciones globales
+        socket.join(`app_${appId}`);
 
-                    const zones = calculateZonesMetrics(cartDetails);
-                    socket.emit('dashboard_update', { zones, cartDetails, rawData });
-                }
-            } catch (error) {
-                console.error("Socket Error:", error);
-            }
-
-        };
-
-
-        // Enviar datos inmediatamente y luego cada 10 segundos
-        await sendData();
-        
-        // Intentar usar Change Streams para actualizaciones en tiempo real
+        // Enviar datos iniciales inmediatamente
         try {
             const db = getDb();
-            const cardsCollection = db.collection('cards_status');
-            
-            if (changeStream) await changeStream.close();
-            
-            changeStream = cardsCollection.watch();
-            changeStream.on('change', async () => {
-                await sendData();
-            });
-
-            // Manejar errores de Change Stream (ej. MongoDB Standalone)
-            changeStream.on('error', (err) => {
-                console.error("ChangeStream error (fallback a polling):", err.message);
-                if (changeStream) changeStream.close().catch(() => {});
-                
-                if (!interval) {
-                    interval = setInterval(sendData, 10000);
-                }
-            });
+            if (db) {
+                const cardsCollection = db.collection('cards_status');
+                const rawData = await cardsCollection.find({ app: appId }).toArray();
+                const cartDetails = processCartData(rawData);
+                const zones = calculateZonesMetrics(cartDetails);
+                socket.emit('dashboard_update', { zones, cartDetails, rawData });
+            }
         } catch (error) {
-            // Fallback a Polling si no hay soporte para Change Streams
-            if (interval) clearInterval(interval);
-            interval = setInterval(sendData, 10000);
+            console.error("Socket Error (Initial Data):", error);
         }
     });
 
-
-    socket.on('disconnect', async () => {
-        if (interval) clearInterval(interval);
-        if (changeStream) await changeStream.close();
+    socket.on('disconnect', () => {
+        // Socket.io maneja la salida de salas automáticamente
     });
 });
 
@@ -164,6 +201,9 @@ io.on('connection', (socket) => {
 connectToDb(async (err) => {
     if (!err) {
         await createDefaultAdmin();
+
+        // Iniciar el watcher global de MongoDB
+        startGlobalWatcher();
 
         server.listen(PORT, () => {
             console.log(`Servidor corriendo en http://localhost:${PORT}`);

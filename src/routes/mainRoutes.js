@@ -60,4 +60,26 @@ router.get('/maps', async (req, res) => {
     res.render('maps', { user: req.session.user, zones, cartDetails });
 });
 
+router.get('/info', async (req, res) => {
+    const db = getDb();
+    let cartDetails = [];
+    let zones = [];
+    let rawData = [];
+
+    try {
+        const userApp = req.session.user.app;
+        const cardsCollection = db.collection('cards_status');
+        
+        if (userApp) {
+            rawData = await cardsCollection.find({ app: userApp }).toArray();
+            cartDetails = processCartData(rawData);
+            zones = calculateZonesMetrics(cartDetails);
+        }
+    } catch (error) {
+        console.error("Error consultando Ezeiza (Info):", error);
+    }
+
+    res.render('dashboard_info', { user: req.session.user, zones, cartDetails, rawData });
+});
+
 module.exports = router;

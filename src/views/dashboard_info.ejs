@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - Información Adicional</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .filter-buttons {
+      margin-bottom: 15px;
+      display: flex;
+      gap: 10px;
+    }
+    .btn-filter {
+      padding: 5px 12px;
+      border: 1px solid #ddd;
+      background: #f8f9fa;
+      border-radius: 20px;
+      cursor: pointer;
+      font-size: 0.85em;
+      transition: all 0.2s;
+    }
+    .btn-filter:hover {
+      background: #e2e6ea;
+    }
+    .btn-filter.active {
+      background: #007bff;
+      color: white;
+      border-color: #007bff;
+    }
+    /* Grid responsive para sensores: se adapta al ancho disponible */
+    .sensor-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+      gap: 10px;
+    }
+    /* Animaciones para tarjetas y sensores */
+    .card-transition {
+      transition: opacity 0.3s ease, transform 0.3s ease;
+      opacity: 1;
+      transform: scale(1);
+    }
+    .card-transition.hiding {
+      opacity: 0;
+      transform: scale(0.95);
+      pointer-events: none;
+    }
+    .card-transition.hidden {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <%- include('partials/header', { page: 'info', user: user }) %>
+
+  <!-- Contenido Principal -->
+  <main class="dashboard-content">
+    <div class="container">
+      <h2>🛒 Control de Carritos</h2>
+
+      <div class="cards-grid" id="summaryGrid" data-app-id="<%= user.app %>">
+        <% zones.forEach(zone=> { %>
+          <div class="card status-<%= zone.status %>" data-zone-name="<%= zone.name %>">
+            <div class="card-header">
+              <h3>
+                <%= zone.name %>
+              </h3>
+            </div>
+            <div class="card-body">
+              <div class="metric">
+                <span class="number">
+                  <%= zone.carts %>
+                </span>
+                <span class="label">
+                  <%= zone.footer_card %>
+                </span>
+              </div>
+            </div>
+          </div>
+          <% }) %>
+      </div>
+
+      <!-- Tarjeta de Referencias -->
+      <div class="card" style="margin-top: 20px;">
+        <div class="card-body legend-content">
+          <div class="legend-item">
+            <span class="status-dot" style="background-color: #dc3545;"></span>
+            <span>Critico (0-20%)</span>
+          </div>
+          <div class="legend-item">
+            <span class="status-dot" style="background-color: #fd7e14;"></span>
+            <span>Medio (20-80%)</span>
+          </div>
+          <div class="legend-item">
+            <span class="status-dot" style="background-color: #28a745;"></span>
+            <span>Normal (80-100%)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sección Dividida: Detalles y Extra -->
+      <div class="card" style="margin-top: 20px;">
+        <div class="card-body">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h2 style="margin: 0;">Información Adicional</h2>
+            <span id="connectionStatus" class="offline-badge">Sin conexión</span>
+          </div>
+          <div class="filter-buttons">
+            <button class="btn-filter active" data-filter="all">Todos</button>
+            <button class="btn-filter" data-filter="completo">Completos</button>
+            <button class="btn-filter" data-filter="medio">Medio</button>
+            <button class="btn-filter" data-filter="critico">Crítico</button>
+          </div>
+          <div class="inner-card-bg">
+            <div class="cards-grid" id="rawDataGrid">
+              <% if (typeof rawData !=='undefined' && rawData) { %>
+                <% const colorPriority={ '#dc3545' : 1, '#fd7e14' : 2, '#28a745' : 3 }; const getPriority=(c)=>
+                  colorPriority[c] || 4;
+                  rawData.sort((a, b) => getPriority(a.color) - getPriority(b.color));
+                  %>
+                  <% rawData.forEach(doc=> { %>
+                    <% const maxVal=doc.cart_counter_max || 1; const pct=doc.percentage !==undefined ? doc.percentage :
+                      Math.round((doc.cart_counter / maxVal) * 100); %>
+                      <% const missing = Math.max(0, maxVal - doc.cart_counter); %>
+                      <div class="card card-transition" data-color="<%= doc.color || '#999' %>" data-percentage="<%= pct %>" style="padding: 15px; border-left: 5px solid <%= doc.color %>;">
+                        <!-- Fila Superior: Título, Botón Color y Porcentaje Circular -->
+                        <div
+                          style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px;">
+                          <div style="display: flex; align-items: center; gap: 8px;">
+                            <h4 style="margin: 0; font-size: 1.1em;">
+                              <%= doc.zone || 'Zona' %>
+                            </h4>
+                            <span
+                              style="background-color: <%= doc.color %>; width: 15px; height: 15px; border-radius: 50%; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);"></span>
+                          </div>
+                          <!-- Gráfico Circular SVG -->
+                          <svg viewBox="0 0 36 36" style="width: 50px; height: 50px; cursor: help;" title="Faltan <%= missing %> carritos para llenar">
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="#eee" stroke-width="3" />
+                            <path d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                              fill="none" stroke="<%= doc.color %>" stroke-width="3" stroke-dasharray="<%= pct %>, 100"
+                              style="transition: stroke-dasharray 0.5s ease;" />
+                            <text x="18" y="20.35" text-anchor="middle" fill="#333" font-size="10px" font-weight="bold">
+                              <%= pct %>%
+                            </text>
+                          </svg>
+                        </div>
+                        <!-- Fila Inferior: Icono Carrito y Contadores -->
+                        <div style="display: flex; align-items: center; gap: 8px; color: #666;">
+                          <span style="font-size: 1.2em;">🛒</span>
+                          <span style="font-weight: 600; font-size: 0.95em;">
+                            <%= doc.cart_counter %> / <%= doc.cart_counter_max %>
+                          </span>
+                        </div>
+                      </div>
+                      <% }) %>
+                        <% } %>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <%- include('partials/footer') %>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/script.js"></script>
+</body>
+
+</html>

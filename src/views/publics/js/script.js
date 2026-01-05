@@ -134,6 +134,40 @@ function initDashboardUpdates(summaryGridElement) {
         legend.addTo(mapInstance);
     }
 
+    // Función para animar visibilidad (Transición suave)
+    const toggleVisibility = (element, show) => {
+        if (show) {
+            if (element.classList.contains('hidden')) {
+                element.classList.remove('hidden');
+                // Forzar reflow para que la transición de opacidad funcione
+                void element.offsetWidth; 
+                element.classList.remove('hiding');
+            } else if (element.classList.contains('hiding')) {
+                element.classList.remove('hiding');
+            }
+        } else {
+            if (!element.classList.contains('hidden') && !element.classList.contains('hiding')) {
+                element.classList.add('hiding');
+                setTimeout(() => {
+                    if (element.classList.contains('hiding')) {
+                        element.classList.add('hidden');
+                    }
+                }, 300); // 300ms coincide con la transición CSS
+            }
+        }
+    };
+
+    // Función auxiliar para filtrar la cuadrícula de sensores
+    const applySensorGridFilter = () => {
+        if (!sensorGrid) return;
+        Array.from(sensorGrid.children).forEach(sensor => {
+            const pct = parseFloat(sensor.getAttribute('data-percentage'));
+            const color = sensor.getAttribute('data-color');
+            const isVisible = checkFilter(pct, color);
+            toggleVisibility(sensor, isVisible);
+        });
+    };
+
     // Configurar botones de filtro
     const filterButtons = document.querySelectorAll('.btn-filter');
     filterButtons.forEach(btn => {
@@ -144,33 +178,83 @@ function initDashboardUpdates(summaryGridElement) {
             
             // Actualizar filtro y renderizar
             currentFilter = btn.dataset.filter;
-            if (lastRawData.length > 0) {
-                renderRawData(lastRawData);
-            }
+            
+            // Aplicar filtros visuales (animados)
+            applySensorGridFilter();
+            applyRawDataFilter();
+            
             if (lastCartDetails.length > 0) {
                 renderMapMarkers(lastCartDetails);
             }
         });
     });
 
+    // Configurar filtros de leyenda (Dashboard)
+    const legendFilters = document.querySelectorAll('.legend-filter');
+    legendFilters.forEach(item => {
+        item.addEventListener('click', () => {
+            const filter = item.dataset.filter;
+            if (currentFilter === filter) {
+                currentFilter = 'all';
+                legendFilters.forEach(f => f.style.opacity = '1');
+            } else {
+                currentFilter = filter;
+                legendFilters.forEach(f => f.style.opacity = (f.dataset.filter === filter) ? '1' : '0.3');
+            }
+            applySensorGridFilter();
+            applyRawDataFilter();
+            // Si hay otros componentes que dependen del filtro, actualizarlos también
+            // renderRawData ya no es necesario llamarlo aquí si usamos filtrado DOM
+        });
+    });
+
+    // Lógica centralizada de filtro
+    const checkFilter = (percentage, color) => {
+        if (currentFilter === 'all') return true;
+        
+        const c = (color || '').toLowerCase();
+        const isRed = c.includes('dc3545');
+        const isOrange = c.includes('fd7e14');
+        const isGreen = c.includes('28a745');
+        
+        if (currentFilter === 'critico') {
+            if (isRed) return true;
+            if (isOrange || isGreen) return false; // Excluir explícitamente otros colores conocidos
+            return percentage <= 20;
+        }
+        if (currentFilter === 'medio') {
+            if (isOrange) return true;
+            if (isRed || isGreen) return false;
+            return percentage > 20 && percentage < 80;
+        }
+        if (currentFilter === 'completo') {
+            if (isGreen) return true;
+            if (isRed || isOrange) return false;
+            return percentage >= 80;
+        }
+        return false;
+    };
+
+    // Función para filtrar Información Adicional (DOM)
+    const applyRawDataFilter = () => {
+        if (!rawDataGrid) return;
+        Array.from(rawDataGrid.children).forEach(card => {
+            const pct = parseFloat(card.getAttribute('data-percentage'));
+            const color = card.getAttribute('data-color');
+            const isVisible = checkFilter(pct, color);
+            toggleVisibility(card, isVisible);
+        });
+    };
+
     // Función auxiliar para renderizar Información Adicional
     const renderRawData = (dataList) => {
         if (!rawDataGrid) return;
 
-        // Filtrar datos
-        const filteredData = dataList.filter(doc => {
-            if (currentFilter === 'all') return true;
-            const color = (doc.color || '').toLowerCase();
-            if (currentFilter === 'critico') return color === '#dc3545';
-            if (currentFilter === 'medio') return color === '#fd7e14';
-            if (currentFilter === 'completo') return color === '#28a745';
-            return true;
-        });
-
         // Ordenar por color: Rojo (#dc3545) primero, Verde (#28a745) último
         const colorPriority = { '#dc3545': 1, '#fd7e14': 2, '#28a745': 3 };
         const getPriority = (c) => colorPriority[c] || 4;
-        const sortedRawData = [...filteredData].sort((a, b) => getPriority(a.color) - getPriority(b.color));
+        // Renderizamos TODOS los datos (sin filtrar array) para permitir animación CSS
+        const sortedRawData = [...dataList].sort((a, b) => getPriority(a.color) - getPriority(b.color));
 
         rawDataGrid.innerHTML = sortedRawData.map(doc => {
             const maxVal = doc.cart_counter_max || 1;
@@ -179,7 +263,7 @@ function initDashboardUpdates(summaryGridElement) {
             const missing = Math.max(0, maxVal - doc.cart_counter);
             
             return `
-            <div class="card" style="padding: 15px; border-left: 5px solid ${color};">
+            <div class="card card-transition" data-color="${color}" data-percentage="${pct}" style="padding: 15px; border-left: 5px solid ${color};">
                 <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 10px; border-bottom: 1px solid #eee; margin-bottom: 10px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <h4 style="margin: 0; font-size: 1.1em;">${doc.zone || 'Zona'}</h4>
@@ -197,6 +281,9 @@ function initDashboardUpdates(summaryGridElement) {
                 </div>
             </div>`;
         }).join('');
+
+        // Aplicar filtro visualmente después de renderizar
+        applyRawDataFilter();
     };
 
     // Función auxiliar para renderizar Marcadores en el Mapa
@@ -209,12 +296,9 @@ function initDashboardUpdates(summaryGridElement) {
 
         // Filtrar datos
         const filteredDetails = details.filter(zone => {
-            if (currentFilter === 'all') return true;
-            const color = (zone.color || '').toLowerCase();
-            if (currentFilter === 'critico') return color === '#dc3545';
-            if (currentFilter === 'medio') return color === '#fd7e14';
-            if (currentFilter === 'completo') return color === '#28a745';
-            return true;
+            const maxVal = zone.cart_counter_max || 1;
+            const pct = zone.percentage !== undefined ? zone.percentage : Math.round((zone.cart_counter / maxVal) * 100);
+            return checkFilter(pct, zone.color);
         });
 
         filteredDetails.forEach(zone => {
@@ -276,31 +360,41 @@ function initDashboardUpdates(summaryGridElement) {
 
         // 2. Actualizar Cuadrícula de Sensores (split-card -> sensor-grid)
         if (sensorGrid && data.cartDetails) {
-            // Ordenar los datos por porcentaje (menor a mayor)
-            const sortedDetails = [...data.cartDetails].sort((a, b) => a.percentage - b.percentage);
+            // Ordenar por color: Rojo (#dc3545) primero, Naranja (#fd7e14), Verde (#28a745), resto
+            const colorPriority = { '#dc3545': 1, '#fd7e14': 2, '#28a745': 3 };
+            const getPriority = (c) => colorPriority[c] || 4;
+            const sortedDetails = [...data.cartDetails].sort((a, b) => getPriority(a.color) - getPriority(b.color));
 
             sortedDetails.forEach(cart => {
                 const zoneName = String(cart.zone || 'Zona');
                 let sensor = Array.from(sensorGrid.children).find(el => el.dataset.sensorZone === zoneName);
+                const pct = cart.percentage !== undefined ? cart.percentage : Math.round((cart.cart_counter / (cart.cart_counter_max || 1)) * 100);
 
                 if (sensor) {
                     sensor.style.backgroundColor = cart.color || '#999';
                     sensor.setAttribute('data-tooltip', `Carritos: ${cart.cart_counter}`);
                     // El porcentaje es el segundo div hijo
-                    if (sensor.children[1]) sensor.children[1].textContent = `${cart.percentage}%`;
+                    if (sensor.children[1]) sensor.children[1].textContent = `${pct}%`;
                 } else {
                     sensor = document.createElement('div');
-                    sensor.className = 'sensor-square fade-in';
+                    sensor.className = 'sensor-square card-transition'; // Usar clase de transición
                     sensor.setAttribute('data-tooltip', `Carritos: ${cart.cart_counter}`);
                     sensor.style.backgroundColor = cart.color || '#999';
                     sensor.setAttribute('data-sensor-zone', zoneName);
                     sensor.innerHTML = `
                         <div style="font-size: 0.7em; margin-bottom: 2px;">${zoneName}</div>
-                        <div>${cart.percentage}%</div>`;
+                        <div>${pct}%</div>`;
                 }
+                // Asegurar atributo data-color para filtrado
+                sensor.setAttribute('data-color', cart.color || '#999');
+                sensor.setAttribute('data-percentage', pct);
+
                 // appendChild mueve el elemento al final si ya existe, logrando el ordenamiento visual
                 sensorGrid.appendChild(sensor);
             });
+            
+            // Re-aplicar filtro después de actualizar
+            applySensorGridFilter();
         }
 
         // 3. Actualizar Información Adicional (rawData)
